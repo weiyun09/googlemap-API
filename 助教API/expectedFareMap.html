@@ -1,0 +1,217 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>FareMap</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col">
+            </div>
+            <div class="col m-3">
+            <h1>預估交通費用</h1>
+            </div>
+            <div class="col">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div id="map" style="width:700px;height:700px"></div>
+            </div>
+            <div class="col-2">
+                <div class="p-2 mt-5">
+                    <p class="lead">自行開車</p>
+                    距離:
+                    <span id="totalDistnceText"></span><br />
+                    收費路段:
+                    <span id="TollDistences"></span><br />
+                    時間:
+                    <span id="totalTime"></span><br />
+                    費用:
+                    <span id="money"></span><br />
+                </div>
+                <div class="p-2 mt-1">
+                    <p class="lead">搭計程車</p>
+                    距離:
+                    <span id="totalDistnceText1"></span><br />
+                    收費路段:
+                    <span id="TollDistences1"></span><br />
+                    時間:
+                    <span id="totalTime1"></span><br />
+                    費用:
+                    <span id="money1"></span><br />
+                </div>
+                <div class="p-2 mt-1">
+                    <p class="lead">大眾運輸</p>
+                    距離:
+                    <span id="totalDistnceText2"></span><br />
+                    時間:
+                    <span id="totalTime2"></span><br />
+                    費用:
+                    <span id="money2"></span><br />
+                </div>
+            </div>
+            <div class="col">
+                <div id="direction" style="width:400px;"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous">
+    </script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous">
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5VnrKtEbXGov9c2ucVtK6Xg3foOjxoHU" async defer>
+    </script>
+    <script>
+        var map;
+        var marker = null;
+        var center = {
+            lat: 24.7571075,
+            lng: 120.952429
+        };
+        var point1 = null,
+            point2 = null;
+        var directionsService = null;
+        var directionsDisplay = null;
+
+        window.onload = function () {
+
+            map = new google.maps.Map(
+                document.getElementById('map'), {
+                    center: center,
+                    zoom: 15
+                });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsDisplay = new google.maps.DirectionsRenderer();
+            directionsDisplay.setMap(map);
+            directionsDisplay.setPanel(document.getElementById('direction'));
+
+            map.addListener("click", function (e) {
+
+                if (point1 == null) {
+                    point1 = e.latLng.lat() + ',' + e.latLng.lng();
+                    return;
+                }
+                if (point2 == null) {
+                    point2 = e.latLng.lat() + ',' + e.latLng.lng();
+                }
+
+                console.log(point1);
+                console.log(point2);
+
+                if (point1 != null && point2 != null) {
+                    // calculate direction for 2 points.
+                    directionsService.route({
+                        origin: point1,
+                        destination: point2,
+                        travelMode: 'DRIVING'
+                    }, function (response, status) {
+                        if (status === 'OK') {
+                            directionsDisplay.setDirections(response);
+                            console.log(response);
+                            var leg = response.routes[0].legs[0];
+                            var totalDistences = 0;
+                            var totalTime = 0;
+                            var TollDistences = 0;
+                            var money = 0;
+                            for (var step of leg.steps) {
+                                totalDistences += parseInt(step.distance.value) / 1000;
+                                totalTime += parseInt(step.duration.value) / 60;
+
+                                var Distences = step.instructions;
+                                Distences.includes("收費路段");
+                                if (Distences.includes("收費路段") == true) {
+                                    TollDistences += parseInt(step.distance.value) / 1000;
+                                }
+                                // console.log(Distences);
+                                money = Math.floor((totalDistences * 5) + (TollDistences * 1.2));
+                                totalDistences = Math.round(totalDistences * 100) / 100;
+                                totalTime = Math.round(totalTime * 100) / 100;
+                                TollDistences = Math.round(TollDistences * 100) / 100;
+                            }
+                            document.getElementById("totalDistnceText").innerText = totalDistences +
+                                "公里";
+                            document.getElementById("totalTime").innerText = totalTime + "分";
+                            document.getElementById("TollDistences").innerText = TollDistences +
+                                "公里";
+                            document.getElementById("money").innerText = money + "元";
+
+                            if (totalDistences <= 1.5) {
+                                var taxmoney = 85;
+                            } else {
+                                var tax = (totalDistences - 1.5) * 1000 / 250;
+                                tax = Math.round(tax * 100) / 100;
+                                var taxmoney = (85 + tax * 5) + TollDistences * 1.2;
+                            }
+                            document.getElementById("totalDistnceText1").innerText =
+                                totalDistences + "公里";;
+                            document.getElementById("totalTime1").innerText = totalTime + "分";;
+                            document.getElementById("TollDistences1").innerText = TollDistences +
+                                "公里";;
+                            document.getElementById("money1").innerText = taxmoney + "元";;
+
+
+                        } else {
+                            window.alert('Directions request failed due to ' + status);
+                        }
+                    });
+
+                    directionsService.route({
+                        origin: point1,
+                        destination: point2,
+                        travelMode: 'TRANSIT'
+                    }, function (response, status) {
+                        console.log(response);
+                        if (status === 'OK') {
+                            directionsDisplay.setDirections(response);
+                            var leg = response.routes[0].legs[0];
+                            var totalDistences = 0;
+                            var totalTime = 0;
+                            for (var step of leg.steps) {
+                                totalDistences += parseInt(step.distance.value) / 1000;
+                                totalTime += parseInt(step.duration.value) / 60;
+                                totalDistences = Math.round(totalDistences * 100) / 100;
+                                totalTime = Math.round(totalTime * 100) / 100;
+                            }
+                            document.getElementById("totalDistnceText2").innerText =
+                                totalDistences + "公里";;
+                            document.getElementById("totalTime2").innerText = totalTime + "分";;
+                            for (var i of response.routes) {
+                                if (i.fare != undefined) {
+                                    document.getElementById("money2").innerText = i.fare.value +
+                                        "元";
+                                } else {
+                                    document.getElementById("money2").innerText = "查無此票價";
+                                }
+                            }
+
+
+                        } else {
+                            window.alert('Directions request failed due to ' + status);
+                        }
+                    });
+
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
